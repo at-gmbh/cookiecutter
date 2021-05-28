@@ -15,6 +15,7 @@ requirements = [
     'jinja2-time>=0.2.0',
     'python-slugify>=4.0.0',
     'requests>=2.23.0',
+    'jsonschema>=3.2.0',
 ]
 
 setup(
