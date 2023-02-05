@@ -91,6 +91,43 @@ def test_load_context_defaults():
 
 
 @pytest.mark.usefixtures('clean_system')
+def test_load_context_defaults_no_requires():
+
+    cc = load_cookiecutter('tests/test-context/cookiecutter-no-requires.json')
+    cc_cfg = context.load_context(
+        cc['cookiecutter-no-requires'], no_input=True, verbose=False
+    )
+
+    assert cc_cfg['full_name'] == 'Raphael Pierzina'
+    assert cc_cfg['email'] == 'raphael@hackebrot.de'
+    assert cc_cfg['plugin_name'] == 'emoji'
+    assert cc_cfg['module_name'] == 'emoji'
+    assert cc_cfg['license'] == 'MIT'
+    assert cc_cfg['docs'] is False
+    assert 'docs_tool' not in cc_cfg.keys()  # skip_if worked
+    assert cc_cfg['year'] == time.strftime('%Y')
+    assert cc_cfg['incept_year'] == 2017
+    assert cc_cfg['released'] is False
+    assert cc_cfg['temperature'] == 77.3
+    assert cc_cfg['Release-GUID'] == UUID('04f5eaa9ee7345469dccffc538b27194').hex
+    assert cc_cfg['_extensions'] == [
+        'cookiecutter.extensions.SlugifyExtension',
+        'jinja2_time.TimeExtension',
+    ]
+    assert cc_cfg['_jinja2_env_vars'] == {"optimized": True}
+    assert (
+        cc_cfg['copy_with_out_render']
+        == "['*.html', '*not_rendered_dir', 'rendered_dir/not_rendered_file.ini']"
+    )
+    assert cc_cfg['fixtures'] == OrderedDict(
+        [
+            ('foo', OrderedDict([('scope', 'session'), ('autouse', True)])),
+            ('bar', OrderedDict([('scope', 'function'), ('autouse', False)])),
+        ]
+    )
+
+
+@pytest.mark.usefixtures('clean_system')
 def test_load_context_defaults_skips_branch():
     """
     Test that if_no_skip_to and if_yes_skip_to actually do branch and
@@ -168,7 +205,9 @@ def test_prompt_string(mocker):
     expected_value = 'Input String'
 
     mock_prompt = mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()
@@ -180,7 +219,10 @@ def test_prompt_string(mocker):
     r = context.prompt_string(v, default='Alpha')
 
     assert mock_prompt.call_args == mocker.call(
-        v.prompt, default='Alpha', hide_input=v.hide_input, type=click.STRING,
+        v.prompt,
+        default='Alpha',
+        hide_input=v.hide_input,
+        type=click.STRING,
     )
 
     assert r == expected_value
@@ -191,7 +233,9 @@ def test_prompt_bool(mocker):
     expected_value = True
 
     mock_prompt = mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()
@@ -203,7 +247,10 @@ def test_prompt_bool(mocker):
     r = context.prompt_boolean(v, default=False)
 
     assert mock_prompt.call_args == mocker.call(
-        v.prompt, default=False, hide_input=v.hide_input, type=click.BOOL,
+        v.prompt,
+        default=False,
+        hide_input=v.hide_input,
+        type=click.BOOL,
     )
 
     assert r  # expected_value
@@ -214,7 +261,9 @@ def test_prompt_int(mocker):
     expected_value = 777
 
     mock_prompt = mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()
@@ -226,7 +275,10 @@ def test_prompt_int(mocker):
     r = context.prompt_int(v, default=1000)
 
     assert mock_prompt.call_args == mocker.call(
-        v.prompt, default=1000, hide_input=v.hide_input, type=click.INT,
+        v.prompt,
+        default=1000,
+        hide_input=v.hide_input,
+        type=click.INT,
     )
 
     assert r == expected_value
@@ -237,7 +289,9 @@ def test_prompt_float(mocker):
     expected_value = 3.14
 
     mock_prompt = mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()
@@ -249,7 +303,10 @@ def test_prompt_float(mocker):
     r = context.prompt_float(v, default=3.0)
 
     assert mock_prompt.call_args == mocker.call(
-        v.prompt, default=3.0, hide_input=v.hide_input, type=click.FLOAT,
+        v.prompt,
+        default=3.0,
+        hide_input=v.hide_input,
+        type=click.FLOAT,
     )
 
     assert r == expected_value
@@ -260,7 +317,9 @@ def test_prompt_uuid(mocker):
     expected_value = '931ef56c3e7b45eea0427bac386f0a98'
 
     mock_prompt = mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()
@@ -272,7 +331,10 @@ def test_prompt_uuid(mocker):
     r = context.prompt_uuid(v, default=None)
 
     assert mock_prompt.call_args == mocker.call(
-        v.prompt, default=None, hide_input=v.hide_input, type=click.UUID,
+        v.prompt,
+        default=None,
+        hide_input=v.hide_input,
+        type=click.UUID,
     )
 
     assert r == expected_value
@@ -283,7 +345,9 @@ def test_prompt_json(monkeypatch, mocker):
     expected_value = '{"port": 67888, "colors": ["red", "green", "blue"]}'
 
     mocker.patch(
-        'click.termui.visible_prompt_func', autospec=True, return_value=expected_value,
+        'click.termui.visible_prompt_func',
+        autospec=True,
+        return_value=expected_value,
     )
     m = mocker.Mock()
     m.side_effect = context.Variable
@@ -325,7 +389,9 @@ def test_prompt_json_default(mocker):
     cfg = '{"port": 67888, "colors": ["red", "green", "blue"]}'
 
     mock_prompt = mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()
@@ -352,7 +418,9 @@ def test_prompt_yes_no_default_no(mocker):
     expected_value = 'y'
 
     mock_prompt = mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()
@@ -368,7 +436,10 @@ def test_prompt_yes_no_default_no(mocker):
     r = context.prompt_yes_no(v, default=False)
 
     assert mock_prompt.call_args == mocker.call(
-        v.prompt, default='n', hide_input=v.hide_input, type=click.BOOL,
+        v.prompt,
+        default='n',
+        hide_input=v.hide_input,
+        type=click.BOOL,
     )
 
     assert r  # expected_value
@@ -379,7 +450,9 @@ def test_prompt_yes_no_default_yes(mocker):
     expected_value = 'y'
 
     mock_prompt = mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()
@@ -395,7 +468,10 @@ def test_prompt_yes_no_default_yes(mocker):
     r = context.prompt_yes_no(v, default=True)
 
     assert mock_prompt.call_args == mocker.call(
-        v.prompt, default='y', hide_input=v.hide_input, type=click.BOOL,
+        v.prompt,
+        default='y',
+        hide_input=v.hide_input,
+        type=click.BOOL,
     )
 
     assert r  # expected_value
@@ -411,7 +487,9 @@ def test_prompt_choice(mocker):
     expected_license = 'MIT'
 
     mocker.patch(
-        'cookiecutter.prompt.click.prompt', autospec=True, return_value=expected_value,
+        'cookiecutter.prompt.click.prompt',
+        autospec=True,
+        return_value=expected_value,
     )
 
     m = mocker.Mock()

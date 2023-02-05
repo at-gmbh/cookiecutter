@@ -14,6 +14,7 @@ https://github.com/audreyr/cookiecutter/pull/848
 https://github.com/hackebrot/cookiecutter/tree/new-context-format
 
 """
+import shutil
 
 import collections
 import json
@@ -34,7 +35,6 @@ from cookiecutter.schema import validate
 logger = logging.getLogger(__name__)
 
 DEFAULT_PROMPT = 'Please enter a value for "{variable.name}"'
-
 
 REGEX_COMPILE_FLAGS = {
     'ascii': re.ASCII,
@@ -154,13 +154,16 @@ def prompt_uuid(variable, default):
 def prompt_json(variable, default):
     """Prompts the user for a JSON entry."""
     # The JSON object from cookiecutter.json might be very large
-    # We only show 'default'
 
+    # We only show 'default'
     default_json = 'default'
 
     def process_json(user_value):
         try:
-            return json.loads(user_value, object_pairs_hook=collections.OrderedDict,)
+            return json.loads(
+                user_value,
+                object_pairs_hook=collections.OrderedDict,
+            )
         except ValueError:
             # json.decoder.JSONDecodeError raised in Python 3.5, 3.6
             # but it inherits from ValueError which is raised in Python 3.4
@@ -440,7 +443,8 @@ class Variable(object):
     def __repr__(self):
         """Provide a representation with variable name."""
         return "<{class_name} {variable_name}>".format(
-            class_name=self.__class__.__name__, variable_name=self.name,
+            class_name=self.__class__.__name__,
+            variable_name=self.name,
         )
 
     def __str__(self):
@@ -475,7 +479,7 @@ class CookiecutterTemplate:
         self.extensions = extensions
 
         if self.requirements:
-            self.cookiecutter_version = self.requirements.get('cookiecutter')
+            self.cookiecutter_version = self.requirements.get('cookiecutter', None)
             if self.cookiecutter_version:
                 validate_requirement(
                     self.cookiecutter_version,
@@ -503,7 +507,8 @@ class CookiecutterTemplate:
     def __repr__(self):
         """Provide a classname with template name."""
         return "<{class_name} {template_name}>".format(
-            class_name=self.__class__.__name__, template_name=self.name,
+            class_name=self.__class__.__name__,
+            template_name=self.name,
         )
 
     def __iter__(self):
@@ -598,7 +603,7 @@ def load_context(json_object: Dict, no_input=False, verbose=True) -> Dict:
 
         # for prompt esthetics
         if verbose:
-            width, _ = click.get_terminal_size()
+            width, _ = shutil.get_terminal_size()
             click.echo('-' * width)
 
         # updating the skipping variables for the continuation

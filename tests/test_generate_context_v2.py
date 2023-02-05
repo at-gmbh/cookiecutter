@@ -220,6 +220,23 @@ expected_file2_v7['template']['variables'][1]['choices'] = [
     'John Houston',
 ]
 
+expected_file2_v8 = deepcopy(expected_file2_v1)
+expected_file2_v8['template']['variables'].insert(
+    1,
+    OrderedDict(
+        [
+            ('name', 'director_exists'),
+            ('default', False),
+            ('prompt', 'Is there a Director?'),
+            ('prompt_user', True),
+            ('description', 'The director exists.'),
+            ('hide_input', False),
+            ('choices', [True, False]),
+            ('type', 'boolean'),
+        ]
+    ),
+)
+
 
 def context_data_serializer():
     """
@@ -309,12 +326,103 @@ def context_data_serializer():
         },
         {"test": expected_file1_v0},
     )
+
+    context_choices_with_default_misses = (
+        {
+            'context_file': 'tests/test-generate-context-v2/test_choices-miss.json',
+            'default_context': {'license': 'Cherokee'},
+        },
+        {
+            "test_choices-miss": OrderedDict(
+                [
+                    ("version", "2.0"),
+                    (
+                        "template",
+                        OrderedDict(
+                            [
+                                ("name", "test_choices-miss"),
+                                (
+                                    "variables",
+                                    [
+                                        OrderedDict(
+                                            [
+                                                ("name", "license"),
+                                                ("type", "string"),
+                                                ("default", "MIT"),
+                                                (
+                                                    "choices",
+                                                    [
+                                                        "MIT",
+                                                        "BSD3",
+                                                        "GNU-GPL3",
+                                                        "Apache2",
+                                                        "Mozilla2",
+                                                    ],
+                                                ),
+                                            ]
+                                        )
+                                    ],
+                                ),
+                            ]
+                        ),
+                    ),
+                ]
+            )
+        },
+    )
+
+    context_choices_with_extra_misses = (
+        {
+            'context_file': 'tests/test-generate-context-v2/test_choices-miss.json',
+            'extra_context': {'license': 'MIT'},
+        },
+        {
+            "test_choices-miss": OrderedDict(
+                [
+                    ("version", "2.0"),
+                    (
+                        "template",
+                        OrderedDict(
+                            [
+                                ("name", "test_choices-miss"),
+                                (
+                                    "variables",
+                                    [
+                                        OrderedDict(
+                                            [
+                                                ("name", "license"),
+                                                ("type", "string"),
+                                                ("default", "MIT"),
+                                                (
+                                                    "choices",
+                                                    [
+                                                        "MIT",
+                                                        "BSD3",
+                                                        "GNU-GPL3",
+                                                        "Apache2",
+                                                        "Mozilla2",
+                                                    ],
+                                                ),
+                                            ]
+                                        )
+                                    ],
+                                ),
+                            ]
+                        ),
+                    ),
+                ]
+            )
+        },
+    )
+
     yield context
     yield context_with_default
     yield context_with_extra
     yield context_with_default_and_extra
     yield context_choices_with_default
     yield context_choices_with_default_not_in_choices
+    yield context_choices_with_default_misses
+    yield context_choices_with_extra_misses
 
 
 @pytest.mark.usefixtures('clean_system')
@@ -325,6 +433,100 @@ def test_generate_context(input_params, expected_context):
     according expected context.
     """
     assert generate.generate_context(**input_params) == expected_context
+
+
+def context_data_value_errors():
+    context_choices_with_default_value_error = (
+        {
+            'context_file': 'tests/test-generate-context-v2/test_choices.json',
+            'default_context': [{'license': 'MIT'}],
+        },
+        {
+            "test_choices": OrderedDict(
+                [
+                    ("name", "cookiecutter-pytest-plugin"),
+                    ("cookiecutter_version", "2.0.0"),
+                    (
+                        "variables",
+                        [
+                            OrderedDict(
+                                [
+                                    ("name", "license"),
+                                    ("default", "MIT"),
+                                    (
+                                        "choices",
+                                        [
+                                            "MIT",
+                                            "Apache2",
+                                            "BSD3",
+                                            "GNU-GPL3",
+                                            "Mozilla2",
+                                        ],
+                                    ),
+                                ]
+                            )
+                        ],
+                    ),
+                ]
+            )
+        },
+        True,
+    )
+    context_choices_with_extra_value_error = (
+        {
+            'context_file': 'tests/test-generate-context-v2/test_choices.json',
+            'default_context': {'license': 'Apache2'},
+            'extra_context': [{'name': 'license', 'default': 'MIT'}],
+        },
+        {
+            "test_choices": OrderedDict(
+                [
+                    ("name", "cookiecutter-pytest-plugin"),
+                    ("cookiecutter_version", "2.0.0"),
+                    (
+                        "variables",
+                        [
+                            OrderedDict(
+                                [
+                                    ("name", "license"),
+                                    ("default", "MIT"),
+                                    (
+                                        "choices",
+                                        [
+                                            "MIT",
+                                            "Apache2",
+                                            "BSD3",
+                                            "GNU-GPL3",
+                                            "Mozilla2",
+                                        ],
+                                    ),
+                                ]
+                            )
+                        ],
+                    ),
+                ]
+            )
+        },
+        False,
+    )
+    yield context_choices_with_default_value_error
+    yield context_choices_with_extra_value_error
+
+
+@pytest.mark.usefixtures('clean_system')
+@pytest.mark.parametrize(
+    'input_params, expected_context, raise_exception', context_data_value_errors()
+)
+def test_generate_context_value_error(input_params, expected_context, raise_exception):
+    """
+    Test the generated context for several input parameters against the
+    according expected context.
+    """
+    if raise_exception:
+        with pytest.raises(ValueError) as excinfo:
+            generate.generate_context(**input_params)
+    else:
+        generate.generate_context(**input_params)
 
 
 @pytest.mark.usefixtures('clean_system')
@@ -415,6 +617,239 @@ def test_generate_context_extra_ctx_list_item_dict_no_name_field_match():
     assert msg in str(excinfo.value)
 
 
+@pytest.mark.usefixtures('clean_system')
+def test_raise_exception_when_attempting_to_remove_mandatory_field():
+    """
+    Test that ValueError is raised if attempt is made to remove a mandatory
+    field -- the default field.
+    The other mandatory field, name, cannot be removed because it has to be
+    used to specify which variable to remove.
+    """
+    xtra_context = [
+        {
+            'name': 'director_name',
+            'default': '<<REMOVE::FIELD>>',
+        },
+    ]
+
+    with pytest.raises(ValueError) as excinfo:
+        generate.generate_context(
+            context_file='tests/test-generate-context-v2/representative.json',
+            default_context=None,
+            extra_context=xtra_context,
+        )
+
+    assert "Cannot remove mandatory 'default' field" in str(excinfo.value)
+
+
+def gen_context_data_inputs_expected_var():
+    # Test the ability to change the variable's name field (since it is used
+    # to identify the variable to be modifed) with extra context and to remove
+    # a key from the context via the removal token: '<<REMOVE::FIELD>>'
+    context_with_valid_extra_2 = (
+        {
+            'context_file': 'tests/test-generate-context-v2/representative.json',
+            'extra_context': [
+                {
+                    'name': 'director_credit::producer_credit',
+                    'prompt': 'Is there a producer credit on this film?',
+                    'description': 'There are usually a lot of producers...',
+                },
+                {
+                    'name': 'director_name',
+                    'skip_if': '<<REMOVE::FIELD>>',
+                },
+            ],
+        },
+        OrderedDict(
+            [
+                (
+                    "representative",
+                    OrderedDict(
+                        [
+                            ('version', '2.0'),
+                            (
+                                "template",
+                                OrderedDict(
+                                    [
+                                        ("name", "cc-representative"),
+                                        (
+                                            "variables",
+                                            [
+                                                OrderedDict(
+                                                    [
+                                                        ("name", "producer_credit"),
+                                                        ("default", True),
+                                                        (
+                                                            "prompt",
+                                                            "Is there a producer credit on this film?",
+                                                        ),
+                                                        (
+                                                            "description",
+                                                            "There are usually a lot of producers...",
+                                                        ),
+                                                        ("type", "boolean"),
+                                                    ]
+                                                ),
+                                                OrderedDict(
+                                                    [
+                                                        ("name", "director_name"),
+                                                        ("default", "Allan Smithe"),
+                                                        (
+                                                            "prompt",
+                                                            "What's the Director's full name?",
+                                                        ),
+                                                        ("prompt_user", True),
+                                                        (
+                                                            "description",
+                                                            "The default director is not proud of their work, we hope you are.",
+                                                        ),
+                                                        ("hide_input", False),
+                                                        (
+                                                            "choices",
+                                                            [
+                                                                "Allan Smithe",
+                                                                "Ridley Scott",
+                                                                "Victor Fleming",
+                                                                "John Houston",
+                                                            ],
+                                                        ),
+                                                        ("validation", "^[a-z][A-Z]+$"),
+                                                        (
+                                                            "validation_flags",
+                                                            ["verbose", "ascii"],
+                                                        ),
+                                                        ("type", "string"),
+                                                    ]
+                                                ),
+                                            ],
+                                        ),
+                                    ]
+                                ),
+                            ),
+                        ]
+                    ),
+                )
+            ]
+        ),
+    )
+    # Test the ability to change the variable's name field (since it is used
+    # to identify the variable to be modifed) with extra context and to also
+    # test that any other references in other variables that might use the
+    # original variable name get updated as well.
+    context_with_valid_extra_2_B = (
+        {
+            'context_file': 'tests/test-generate-context-v2/representative_2B.json',
+            'extra_context': [
+                {
+                    'name': 'director_credit::producer_credit',
+                    'prompt': 'Is there a producer credit on this film?',
+                    'description': 'There are usually a lot of producers...',
+                },
+            ],
+        },
+        OrderedDict(
+            [
+                (
+                    "representative_2B",
+                    OrderedDict(
+                        [
+                            ('version', '2.0'),
+                            (
+                                'requires',
+                                OrderedDict(
+                                    [('cookiecutter', '>1'), ('python', '>=3.0')]
+                                ),
+                            ),
+                            (
+                                "template",
+                                OrderedDict(
+                                    [
+                                        ("name", "cc-representative"),
+                                        (
+                                            "variables",
+                                            [
+                                                OrderedDict(
+                                                    [
+                                                        ("name", "producer_credit"),
+                                                        ("default", True),
+                                                        (
+                                                            "prompt",
+                                                            "Is there a producer credit on this film?",
+                                                        ),
+                                                        (
+                                                            "description",
+                                                            "There are usually a lot of producers...",
+                                                        ),
+                                                        ("type", "boolean"),
+                                                    ]
+                                                ),
+                                                OrderedDict(
+                                                    [
+                                                        ("name", "director_name"),
+                                                        ("default", "Allan Smithe"),
+                                                        (
+                                                            "prompt",
+                                                            "What's the Director's full name?",
+                                                        ),
+                                                        ("prompt_user", True),
+                                                        (
+                                                            "description",
+                                                            "The default director is not proud of their work, we hope you are.",
+                                                        ),
+                                                        ("hide_input", False),
+                                                        (
+                                                            "choices",
+                                                            [
+                                                                "Allan Smithe",
+                                                                "Ridley Scott",
+                                                                "Victor Fleming",
+                                                                "John Houston",
+                                                                "{{cookiecutter.producer_credit}}",
+                                                            ],
+                                                        ),
+                                                        ("validation", "^[a-z][A-Z]+$"),
+                                                        (
+                                                            "validation_flags",
+                                                            ["verbose", "ascii"],
+                                                        ),
+                                                        (
+                                                            "skip_if",
+                                                            "{{cookiecutter.producer_credit == False}}",
+                                                        ),
+                                                        ("type", "string"),
+                                                    ]
+                                                ),
+                                            ],
+                                        ),
+                                    ]
+                                ),
+                            ),
+                        ]
+                    ),
+                )
+            ]
+        ),
+    )
+
+    yield context_with_valid_extra_2
+    yield context_with_valid_extra_2_B
+
+
+@pytest.mark.usefixtures('clean_system')
+@pytest.mark.parametrize(
+    'input_params, expected_context', gen_context_data_inputs_expected_var()
+)
+def test_generate_context_with_extra_context_dictionary_var(
+    input_params, expected_context, monkeypatch
+):
+    """
+    Test the generated context with extra content overwrite to multiple fields,
+    with creation of new fields NOT allowed.
+    """
+    assert generate.generate_context(**input_params) == expected_context
+
+
 def gen_context_data_inputs_expected():
     """
     Creates a generator of combination:
@@ -448,17 +883,20 @@ def gen_context_data_inputs_expected():
     # a key from the context via the removal token: '<<REMOVE::FIELD>>'
     context_with_valid_extra_2 = (
         {
-            'context_file': 'tests/test-generate-context-v2/representative.json',
+            'context_file': 'tests/test-generate-context-v2/representative-director.json',
             'extra_context': [
                 {
                     'name': 'director_credit::producer_credit',
                     'prompt': 'Is there a producer credit on this film?',
                     'description': 'There are usually a lot of producers...',
                 },
-                {'name': 'director_name', 'skip_if': '<<REMOVE::FIELD>>',},
+                {
+                    'name': 'director_name',
+                    'skip_if': '<<REMOVE::FIELD>>',
+                },
             ],
         },
-        {"representative": expected_file2_v1},
+        {"representative-director": expected_file2_v8},
     )
     # Test the ability to change the variable's name field (since it is used
     # to identify the variable to be modifed) with extra context and to also
@@ -617,7 +1055,12 @@ def gen_context_data_inputs_expected():
     context_with_valid_extra_6 = (
         {
             'context_file': 'tests/test-generate-context-v2/representative.json',
-            'extra_context': [{'name': 'director_name', 'default': 'John Ford',}],
+            'extra_context': [
+                {
+                    'name': 'director_name',
+                    'default': 'John Ford',
+                }
+            ],
         },
         {"representative": expected_file2_v5},
     )
@@ -647,7 +1090,12 @@ def gen_context_data_inputs_expected():
     context_with_valid_extra_8 = (
         {
             'context_file': 'tests/test-generate-context-v2/representative.json',
-            'extra_context': [{'name': 'director_name', 'default': 'Peter Sellers',}],
+            'extra_context': [
+                {
+                    'name': 'director_name',
+                    'default': 'Peter Sellers',
+                }
+            ],
         },
         {"representative": expected_file2_v7},
     )
@@ -677,25 +1125,3 @@ def test_generate_context_with_extra_context_dictionary(
     assert OrderedDict(generate.generate_context(**input_params)) == OrderedDict(
         expected_context
     )
-
-
-@pytest.mark.usefixtures('clean_system')
-def test_raise_exception_when_attempting_to_remove_mandatory_field():
-    """
-    Test that ValueError is raised if attempt is made to remove a mandatory
-    field -- the default field.
-    The other mandatory field, name, cannot be removed because it has to be
-    used to specify which variable to remove.
-    """
-    xtra_context = [
-        {'name': 'director_name', 'default': '<<REMOVE::FIELD>>',},
-    ]
-
-    with pytest.raises(ValueError) as excinfo:
-        generate.generate_context(
-            context_file='tests/test-generate-context-v2/representative.json',
-            default_context=None,
-            extra_context=xtra_context,
-        )
-
-    assert "Cannot remove mandatory 'default' field" in str(excinfo.value)
